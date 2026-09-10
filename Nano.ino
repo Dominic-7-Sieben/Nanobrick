@@ -26,6 +26,7 @@ int instances = 11; // The amount of menu logic options.
 float X, Y, Z;
 int R, G, B;
 float proxy = 0;
+bool sleepState = false;
 
 unsigned long lastDebounceTime = 0;
 unsigned long debounceDelay = 50;
@@ -36,6 +37,7 @@ volatile int samplesRead;
 
 void setup() {
   // put your setup code here, to run once:
+  Serial.begin(9600);
   tft.initR(INITR_MINI160x80); 
   tft.setRotation(2);
   tft.setTextWrap(true);
@@ -46,7 +48,7 @@ void setup() {
   pinMode(LEDB, OUTPUT);
   digitalWrite(LEDR, HIGH);         
   digitalWrite(LEDG, HIGH);      
-  digitalWrite(LEDB, HIGH); 
+  digitalWrite(LEDB, HIGH);
   IMU.begin();
   BARO.begin();
   HS300x.begin();
@@ -80,6 +82,7 @@ void modeManage(int status){
     counter++;
     tft.fillScreen(ST7735_BLACK);
     tft.setTextColor(ST77XX_WHITE);
+    sleepState = false;
     }
     else {
     counter = 0;
@@ -99,10 +102,20 @@ void modeManage(int status){
   case 9: runMicrophone(); break;
   case 10: runFlashlight(); break;
   default: // This acts as a "sleep" mode for the system. The amount of instances exceeds the case count by 1, so one menu option will trigger this default.
+  if (sleepState == false){
   tft.fillScreen(ST7735_BLACK);
   analogWrite(LEDR, 255);
   analogWrite(LEDG, 255);
   analogWrite(LEDB, 255);
+  for (int i = 0; i <= 10; i++){
+  analogWrite(LEDG, 0);
+  delay(500);
+  analogWrite(LEDG, 255);
+  delay(500);
+  }
+  Serial.println("Sleeping...");
+  sleepState = true;
+  }
   break;
   }
 }
