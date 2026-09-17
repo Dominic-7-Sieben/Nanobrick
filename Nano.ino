@@ -162,17 +162,17 @@ void runGyroscope(){
   analogWrite(LEDB, 255 - fabs(Z));
 }
 void runPressure(){
-  float P = BARO.readPressure();
+  float kPa = BARO.readPressure();
+  float mBar = kPa * 10;
   tft.setCursor(0, 0);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(1);
   tft.println("Air Pressure");
   tft.setCursor(0, 50);
-  tft.fillRect(15, 50, 45, 10, ST77XX_BLACK);
-  tft.print("P: ");
-  tft.print(P);
-  tft.println("  kPa");
-  analogWrite(LEDR, 255 - fabs(P));
+  tft.fillRect(0, 50, 50, 10, ST77XX_BLACK);
+  tft.print(mBar);
+  tft.println("  mBar");
+  analogWrite(LEDR, 255 - fabs(kPa));
 }
 void runAltitude(){
   float A = BARO.readPressure();
