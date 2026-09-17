@@ -169,7 +169,7 @@ void runPressure(){
   tft.setTextSize(1);
   tft.println("Air Pressure");
   tft.setCursor(0, 50);
-  tft.fillRect(0, 50, 50, 10, ST77XX_BLACK);
+  tft.fillRect(0, 50, 80, 10, ST77XX_BLACK);
   tft.print(mBar);
   tft.println("  mBar");
   analogWrite(LEDR, 255 - fabs(kPa));
