@@ -255,7 +255,7 @@ void runGyroscope(int check){
   tft.setTextSize(1);
   tft.println("Gyroscope");
   tft.setCursor(0, 50);
-  tft.fillRect(15, 50, 35, 30, ST77XX_BLACK);
+  tft.fillRect(15, 50, 55, 30, ST77XX_BLACK);
   tft.setTextColor(ST77XX_BLUE);
   tft.print("X: ");
   tft.println(X - XAdjust);
@@ -323,7 +323,7 @@ void runMagnetometer(int check){
   tft.setTextSize(1);
   tft.println("Magnetometer");
   tft.setCursor(0, 50);
-  tft.fillRect(15, 50, 55, 30, ST77XX_BLACK);
+  tft.fillRect(15, 50, 35, 30, ST77XX_BLACK);
   tft.setTextColor(ST77XX_BLUE);
   tft.print("X: ");
   tft.println(X);
@@ -357,6 +357,7 @@ void runMagnetometer(int check){
   tft.print("Z: ");
   tft.println(Z - ZAdjust);
   analogWrite(LEDB, 255 - axisToPWM(Z - ZAdjust));
+  }
 }
 void runTemperature(){
   float CT = HS300x.readTemperature();
