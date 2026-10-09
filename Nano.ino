@@ -19,13 +19,14 @@
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 int backlightpin = 4;
 
+int tallycount = 0;
 bool calibrated = false;
 int reading = 0;
 int counter = 0;
 int buttonPin = 2;
 int lastsavedState = HIGH;
 int currentState = 0;
-int instances = 11; // The amount of menu logic options.
+int instances = 13; // The amount of menu logic options.
 float X, Y, Z;
 float XAdjust, YAdjust, ZAdjust;
 int R, G, B;
@@ -34,11 +35,18 @@ bool sleepState = false;
 int State = 0;
 int count = 0;
 int count2 = 0;
+int hour = 0;
+int minute = 0;
+int day = 0;
+int month = 0;
+int lastUpdatedMinute = 0;
 
 unsigned long startTime = 0;
 unsigned long singleClickDelay = 50;
 unsigned long pressTime = 0;
 unsigned long releaseTime = 0;
+unsigned long setTime = 0;
+unsigned long lastUpdate = 0;
 
 short sampleBuffer[256];
 volatile int samplesRead;
@@ -68,17 +76,39 @@ void setup() {
   digitalWrite(backlightpin, HIGH);
 }
 void loop() {
+unsigned long now = millis();
+unsigned long elapsed = now - lastUpdate;
+
+if (elapsed >= 60000) {
+    minute += elapsed / 60000;
+    lastUpdate = now;
+
+    // Handle minute rollover
+    while (minute >= 60) {
+        minute -= 60;
+        hour++;
+
+        // Handle hour rollover
+        if (hour >= 24) {
+            hour = 0;
+        }
+    }
+}
+
 if (button() == 0){ // Checks if button is pressed
-pressTime = millis(); // Store when button was pressed
-while (button() == 0){} //This causes it to wait for the button to be unpressed
-releaseTime = millis(); // Once the button is no longer = 0, check what time it is.
-unsigned long duration = releaseTime - pressTime;
-if (duration >= 500){
-modeManage(2);
-}
-else if (duration < 500){
-modeManage(1);
-}
+  pressTime = millis(); // Store when button was pressed
+  while (button() == 0){} //This causes it to wait for the button to be unpressed
+  releaseTime = millis(); // Once the button is no longer = 0, check what time it is.
+  unsigned long duration = releaseTime - pressTime;
+    if (duration >= 1500){
+      modeManage(3); //Long Hold
+    }
+    else if (duration >= 500 && duration < 1000){
+      modeManage(2); //Short Hold
+    }
+    else if (duration < 250){
+      modeManage(1); //Quick Press
+    }
 }
 modeManage(0);
 }
@@ -90,60 +120,93 @@ return value;
 
 
 void modeManage(int manageint){
-if (manageint == 0){
-if (count2 != counter){
-  count2 = counter;
-  tft.fillScreen(ST7735_BLACK);
+  if (manageint == 0){
+    if (count2 != counter){
+      count2 = counter;
+      tft.fillScreen(ST7735_BLACK);
+      analogWrite(LEDR, 255);
+      analogWrite(LEDG, 255);
+      analogWrite(LEDB, 255);
 }
 switch (counter) {
-case 0: runAccelerometer(0); break;
-case 1: runGyroscope(0); break;
-case 2: runPressure(); break;
-case 3: runAltitude(); break;
-case 4: runMagnetometer(0); break;
-case 5: runTemperature(); break;
-case 6: runHumidity(); break;
-case 7: runColor(); break;
-case 8: runProxy(); break;
-case 9: runMicrophone(); break;
-case 10: runFlashlight(); break;
-case 11: sleep(); break;
-default:
-  counter = 0;
-  sleepState = false;
-  calibrated = false;
-  tft.fillScreen(ST7735_BLACK);
-  tft.setTextColor(ST77XX_WHITE);
-  digitalWrite(backlightpin, HIGH);
-break;
+  case 0: runAccelerometer(0); break;
+  case 1: runGyroscope(0); break;
+  case 2: runPressure(); break;
+  case 3: runAltitude(); break;
+  case 4: runMagnetometer(0); break;
+  case 5: runTemperature(); break;
+  case 6: runHumidity(); break;
+  case 7: runColor(); break;
+  case 8: runProxy(); break;
+  case 9: runMicrophone(); break;
+  case 10: runFlashlight(); break;
+  case 11: tally(0); break;
+  case 12: clock(0); break;
+  case 13: sleep(); break;
+  default:
+    counter = 0;
+    sleepState = false;
+    calibrated = false;
+    tft.fillScreen(ST7735_BLACK);
+    tft.setTextColor(ST77XX_WHITE);
+    digitalWrite(backlightpin, HIGH);
+  break;
 }
 }
 else if (manageint == 1){
   counter++;
 }
 else if (manageint == 2){
-switch (counter) {
-case 0: runAccelerometer(1); break;
-case 1: runGyroscope(1); break;
-case 2: runPressure(); break;
-case 3: runAltitude(); break;
-case 4: runMagnetometer(1); break;
-case 5: runTemperature(); break;
-case 6: runHumidity(); break;
-case 7: runColor(); break;
-case 8: runProxy(); break;
-case 9: runMicrophone(); break;
-case 10: runFlashlight(); break;
-case 11: sleep(); break;
-default:
-  counter = 0;
-  sleepState = false;
-  calibrated = false;
-  tft.fillScreen(ST7735_BLACK);
-  tft.setTextColor(ST77XX_WHITE);
-  digitalWrite(backlightpin, HIGH);
-break;
+  switch (counter) {
+    case 0: runAccelerometer(1); break;
+    case 1: runGyroscope(1); break;
+    case 2: runPressure(); break;
+    case 3: runAltitude(); break;
+    case 4: runMagnetometer(1); break;
+    case 5: runTemperature(); break;
+    case 6: runHumidity(); break;
+    case 7: runColor(); break;
+    case 8: runProxy(); break;
+    case 9: runMicrophone(); break;
+    case 10: runFlashlight(); break;
+    case 11: tally(1); break;
+    case 12: clock(1); break;
+    case 13: sleep(); break;
+    default:
+      counter = 0;
+      sleepState = false;
+      calibrated = false;
+      tft.fillScreen(ST7735_BLACK);
+      tft.setTextColor(ST77XX_WHITE);
+      digitalWrite(backlightpin, HIGH);
+    break;
+  }
 }
+else if (manageint == 3){
+  switch (counter) {
+    case 0: runAccelerometer(0); break;
+    case 1: runGyroscope(0); break;
+    case 2: runPressure(); break;
+    case 3: runAltitude(); break;
+    case 4: runMagnetometer(0); break;
+    case 5: runTemperature(); break;
+    case 6: runHumidity(); break;
+    case 7: runColor(); break;
+    case 8: runProxy(); break;
+    case 9: runMicrophone(); break;
+    case 10: runFlashlight(); break;
+    case 11: tally(2); break;
+    case 12: clock(2); break;
+    case 13: sleep(); break;
+    default:
+      counter = 0;
+      sleepState = false;
+      calibrated = false;
+      tft.fillScreen(ST7735_BLACK);
+      tft.setTextColor(ST77XX_WHITE);
+      digitalWrite(backlightpin, HIGH);
+    break;
+  }
 }
 }
 void runAccelerometer(int check){
@@ -323,7 +386,7 @@ void runMagnetometer(int check){
   tft.setTextSize(1);
   tft.println("Magnetometer");
   tft.setCursor(0, 50);
-  tft.fillRect(15, 50, 35, 30, ST77XX_BLACK);
+  tft.fillRect(15, 50, 55, 30, ST77XX_BLACK);
   tft.setTextColor(ST77XX_BLUE);
   tft.print("X: ");
   tft.println(X);
@@ -344,7 +407,7 @@ void runMagnetometer(int check){
   tft.setTextSize(1);
   tft.println("Magnetometer");
   tft.setCursor(0, 50);
-  tft.fillRect(15, 50, 35, 30, ST77XX_BLACK);
+  tft.fillRect(15, 50, 55, 30, ST77XX_BLACK);
   tft.setTextColor(ST77XX_BLUE);
   tft.print("X: ");
   tft.println(X - XAdjust);
@@ -497,4 +560,43 @@ void sleep(){
   Serial.println("Sleeping...");
   sleepState = true;
   }
+}
+void tally(int tally){
+  if (tally == 2){
+    tft.fillScreen(ST77XX_BLACK);
+    tallycount = 0;
+  }
+  if (tally == 1){
+    tft.fillScreen(ST77XX_BLACK);
+    tallycount++;
+  }
+  tft.setCursor(0, 0);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(1);
+  tft.println("Tally Counter");
+  tft.setCursor(0, 0);
+  tft.setTextColor(ST77XX_YELLOW);
+  tft.setCursor(0, 50);
+  tft.setTextSize(3);
+  tft.print(tallycount);
+}
+void clock(int mode){
+  if (lastUpdatedMinute != minute){
+    lastUpdatedMinute = minute;
+    tft.fillScreen(ST77XX_BLACK);
+  }
+  if (mode == 2){
+    setclock();
+  }
+  if (mode == 0){
+  tft.setCursor(0, 25);
+  tft.setTextSize(5);
+  tft.print(hour);
+  tft.setCursor(0, 80);
+  tft.setTextSize(5);
+  tft.print(minute);
+  }
+}
+void setclock(){
+ //Functionality not prepared yet.
 }
