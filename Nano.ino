@@ -1,5 +1,9 @@
 /* Notes:
   Colors on the screen go as follows: BGR, not RGB. So red = blue, and blue = red. Green still equals green.
+  I tell you, on the day I implemented the battery system, the pad for the SDA pin of the screen tore off,
+  so I surgically wired it up to a different point which happened to be on the ribbon cable going to the screen, and that worked.
+  Then, after wiring up the system and coding it, the battery was apparently reading 0%, and I thought, "Oh NO! I do not want to open it back up again."
+  then I realized, I had wired the battery system to A7, not A0, and after making that change, it worked just fine.
 
 */
 #include <Adafruit_GFX.h>    // Core graphics library
@@ -26,7 +30,7 @@ int counter = 0;
 int buttonPin = 2;
 int lastsavedState = HIGH;
 int currentState = 0;
-int instances = 13; // The amount of menu logic options.
+int instances = 14; // The amount of menu logic options.
 float X, Y, Z;
 float XAdjust, YAdjust, ZAdjust;
 int R, G, B;
@@ -41,6 +45,11 @@ int day = 0;
 int month = 0;
 int lastUpdatedMinute = 0;
 bool clockisset = false;
+
+const int battPin = A7;
+const float R1 = 10000.0;
+const float R2 = 10000.0;
+const float Vref = 3.3;
 
 unsigned long startTime = 0;
 unsigned long singleClickDelay = 50;
@@ -129,18 +138,19 @@ void modeManage(int manageint){
   switch (counter) {
     case 0: clock(0); break;
     case 1: tally(0); break;
-    case 2: runTemperature(); break;
-    case 3: runHumidity(); break;
-    case 4: runPressure(); break;
-    case 5: runFlashlight(); break;
-    case 6: runAccelerometer(0); break;
-    case 7: runGyroscope(0); break;
-    case 8: runMagnetometer(0); break;
-    case 9: runMicrophone(); break;
-    case 10: runProxy(); break;
-    case 11: runColor(); break;
-    case 12: runAltitude(); break;
-    case 13: sleep(); break;
+    case 2: battery(); break;
+    case 3: runTemperature(); break;
+    case 4: runHumidity(); break;
+    case 5: runPressure(); break;
+    case 6: runFlashlight(); break;
+    case 7: runAccelerometer(0); break;
+    case 8: runGyroscope(0); break;
+    case 9: runMagnetometer(0); break;
+    case 10: runMicrophone(); break;
+    case 11: runProxy(); break;
+    case 12: runColor(); break;
+    case 13: runAltitude(); break;
+    case 14: sleep(); break;
     default:
       counter = 0;
       sleepState = false;
@@ -156,20 +166,21 @@ void modeManage(int manageint){
   }
   else if (manageint == 2){
     switch (counter) {
-      case 0: clock(1); break;
-      case 1: tally(1); break;
-      case 2: runTemperature(); break;
-      case 3: runHumidity(); break;
-      case 4: runPressure(); break;
-      case 5: runFlashlight(); break;
-      case 6: runAccelerometer(1); break;
-      case 7: runGyroscope(1); break;
-      case 8: runMagnetometer(1); break;
-      case 9: runMicrophone(); break;
-      case 10: runProxy(); break;
-      case 11: runColor(); break;
-      case 12: runAltitude(); break;
-      case 13: sleep(); break;
+      case 0: clock(0); break;
+      case 1: tally(0); break;
+      case 2: battery(); break;
+      case 3: runTemperature(); break;
+      case 4: runHumidity(); break;
+      case 5: runPressure(); break;
+      case 6: runFlashlight(); break;
+      case 7: runAccelerometer(0); break;
+      case 8: runGyroscope(0); break;
+      case 9: runMagnetometer(0); break;
+      case 10: runMicrophone(); break;
+      case 11: runProxy(); break;
+      case 12: runColor(); break;
+      case 13: runAltitude(); break;
+      case 14: sleep(); break;
       default:
         counter = 0;
         sleepState = false;
@@ -182,20 +193,21 @@ void modeManage(int manageint){
   }
   else if (manageint == 3){
     switch (counter) {
-      case 0: clock(2); break;
-      case 1: tally(2); break;
-      case 2: runTemperature(); break;
-      case 3: runHumidity(); break;
-      case 4: runPressure(); break;
-      case 5: runFlashlight(); break;
-      case 6: runAccelerometer(0); break;
-      case 7: runGyroscope(0); break;
-      case 8: runMagnetometer(0); break;
-      case 9: runMicrophone(); break;
-      case 10: runProxy(); break;
-      case 11: runColor(); break;
-      case 12: runAltitude(); break;
-      case 13: sleep(); break;
+      case 0: clock(0); break;
+      case 1: tally(0); break;
+      case 2: battery(); break;
+      case 3: runTemperature(); break;
+      case 4: runHumidity(); break;
+      case 5: runPressure(); break;
+      case 6: runFlashlight(); break;
+      case 7: runAccelerometer(0); break;
+      case 8: runGyroscope(0); break;
+      case 9: runMagnetometer(0); break;
+      case 10: runMicrophone(); break;
+      case 11: runProxy(); break;
+      case 12: runColor(); break;
+      case 13: runAltitude(); break;
+      case 14: sleep(); break;
       default:
         counter = 0;
         sleepState = false;
@@ -654,4 +666,60 @@ int generalButtonmanage(){
     }
   }
   return 0;
+}
+void battery() {
+  float voltage = readBatteryVoltage();
+  int percent = batteryPercent(voltage);
+
+  // Battery icon position
+  int x = 10;
+  int y = 20;
+  int w = 20;   // width
+  int h = 60;   // height
+
+  // Clear screen
+  tft.fillScreen(ST77XX_BLACK);
+
+  // Draw outline
+  tft.drawRect(x, y, w, h, ST77XX_WHITE);
+
+  // Battery tip
+  tft.fillRect(x + 5, y - 8, w - 10, 8, ST77XX_WHITE);
+
+  // Fill level
+  int fillHeight = (h * percent) / 100;
+  int fillY = y + (h - fillHeight);
+
+  // Choose color based on percent
+  uint16_t color = ST77XX_GREEN;
+  if (percent < 30) color = ST77XX_RED;
+  else if (percent < 60) color = ST77XX_YELLOW;
+
+  tft.fillRect(x + 2, fillY + 2, w - 4, fillHeight - 4, color);
+
+  // Percent text
+  tft.setCursor(40, 40);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+  tft.print(percent);
+  tft.print("%");
+
+  // Voltage text (optional)
+  tft.setCursor(40, 70);
+  tft.setTextSize(1);
+  tft.print(voltage, 2);
+  tft.print("V");
+}
+float readBatteryVoltage() {
+  int raw = analogRead(battPin);
+  float vOut = (raw / 1023.0) * Vref;
+  float vIn  = vOut * (R1 + R2) / R2;
+  Serial.println(raw);
+  Serial.println(vIn);
+  return vIn;
+}
+int batteryPercent(float v) {
+  int p = map(v * 100, 330, 420, 0, 100);
+  p = constrain(p, 0, 100);
+  return p;
 }
