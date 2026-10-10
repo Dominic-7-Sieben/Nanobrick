@@ -40,6 +40,7 @@ int minute = 0;
 int day = 0;
 int month = 0;
 int lastUpdatedMinute = 0;
+bool clockisset = false;
 
 unsigned long startTime = 0;
 unsigned long singleClickDelay = 50;
@@ -76,49 +77,46 @@ void setup() {
   digitalWrite(backlightpin, HIGH);
 }
 void loop() {
-unsigned long now = millis();
-unsigned long elapsed = now - lastUpdate;
+  unsigned long now = millis();
+  unsigned long elapsed = now - lastUpdate;
 
-if (elapsed >= 60000) {
-    minute += elapsed / 60000;
-    lastUpdate = now;
+  if (elapsed >= 60000) {
+      minute += elapsed / 60000;
+      lastUpdate = now;
 
-    // Handle minute rollover
-    while (minute >= 60) {
-        minute -= 60;
-        hour++;
+      // Handle minute rollover
+      while (minute >= 60) {
+          minute -= 60;
+          hour++;
 
-        // Handle hour rollover
-        if (hour >= 24) {
-            hour = 0;
-        }
-    }
+          // Handle hour rollover
+          if (hour >= 24) {
+              hour = 0;
+          }
+      }
+  }
+
+  if (button() == 0){ // Checks if button is pressed
+    pressTime = millis(); // Store when button was pressed
+    while (button() == 0){} //This causes it to wait for the button to be unpressed
+    releaseTime = millis(); // Once the button is no longer = 0, check what time it is.
+    unsigned long duration = releaseTime - pressTime;
+      if (duration >= 1500){
+        modeManage(3); //Long Hold
+      }
+      else if (duration >= 500 && duration < 1000){
+        modeManage(2); //Short Hold
+      }
+      else if (duration < 250){
+        modeManage(1); //Quick Press
+      }
+  }
+  modeManage(0);
 }
-
-if (button() == 0){ // Checks if button is pressed
-  pressTime = millis(); // Store when button was pressed
-  while (button() == 0){} //This causes it to wait for the button to be unpressed
-  releaseTime = millis(); // Once the button is no longer = 0, check what time it is.
-  unsigned long duration = releaseTime - pressTime;
-    if (duration >= 1500){
-      modeManage(3); //Long Hold
-    }
-    else if (duration >= 500 && duration < 1000){
-      modeManage(2); //Short Hold
-    }
-    else if (duration < 250){
-      modeManage(1); //Quick Press
-    }
-}
-modeManage(0);
-}
-
 int button(){
-int value = digitalRead(buttonPin);
-return value;
+  int value = digitalRead(buttonPin);
+  return value;
 }
-
-
 void modeManage(int manageint){
   if (manageint == 0){
     if (count2 != counter){
@@ -127,50 +125,21 @@ void modeManage(int manageint){
       analogWrite(LEDR, 255);
       analogWrite(LEDG, 255);
       analogWrite(LEDB, 255);
-}
-switch (counter) {
-  case 0: runAccelerometer(0); break;
-  case 1: runGyroscope(0); break;
-  case 2: runPressure(); break;
-  case 3: runAltitude(); break;
-  case 4: runMagnetometer(0); break;
-  case 5: runTemperature(); break;
-  case 6: runHumidity(); break;
-  case 7: runColor(); break;
-  case 8: runProxy(); break;
-  case 9: runMicrophone(); break;
-  case 10: runFlashlight(); break;
-  case 11: tally(0); break;
-  case 12: clock(0); break;
-  case 13: sleep(); break;
-  default:
-    counter = 0;
-    sleepState = false;
-    calibrated = false;
-    tft.fillScreen(ST7735_BLACK);
-    tft.setTextColor(ST77XX_WHITE);
-    digitalWrite(backlightpin, HIGH);
-  break;
-}
-}
-else if (manageint == 1){
-  counter++;
-}
-else if (manageint == 2){
+  }
   switch (counter) {
-    case 0: runAccelerometer(1); break;
-    case 1: runGyroscope(1); break;
-    case 2: runPressure(); break;
-    case 3: runAltitude(); break;
-    case 4: runMagnetometer(1); break;
-    case 5: runTemperature(); break;
-    case 6: runHumidity(); break;
-    case 7: runColor(); break;
-    case 8: runProxy(); break;
+    case 0: clock(0); break;
+    case 1: tally(0); break;
+    case 2: runTemperature(); break;
+    case 3: runHumidity(); break;
+    case 4: runPressure(); break;
+    case 5: runFlashlight(); break;
+    case 6: runAccelerometer(0); break;
+    case 7: runGyroscope(0); break;
+    case 8: runMagnetometer(0); break;
     case 9: runMicrophone(); break;
-    case 10: runFlashlight(); break;
-    case 11: tally(1); break;
-    case 12: clock(1); break;
+    case 10: runProxy(); break;
+    case 11: runColor(); break;
+    case 12: runAltitude(); break;
     case 13: sleep(); break;
     default:
       counter = 0;
@@ -181,33 +150,62 @@ else if (manageint == 2){
       digitalWrite(backlightpin, HIGH);
     break;
   }
-}
-else if (manageint == 3){
-  switch (counter) {
-    case 0: runAccelerometer(0); break;
-    case 1: runGyroscope(0); break;
-    case 2: runPressure(); break;
-    case 3: runAltitude(); break;
-    case 4: runMagnetometer(0); break;
-    case 5: runTemperature(); break;
-    case 6: runHumidity(); break;
-    case 7: runColor(); break;
-    case 8: runProxy(); break;
-    case 9: runMicrophone(); break;
-    case 10: runFlashlight(); break;
-    case 11: tally(2); break;
-    case 12: clock(2); break;
-    case 13: sleep(); break;
-    default:
-      counter = 0;
-      sleepState = false;
-      calibrated = false;
-      tft.fillScreen(ST7735_BLACK);
-      tft.setTextColor(ST77XX_WHITE);
-      digitalWrite(backlightpin, HIGH);
-    break;
   }
-}
+  else if (manageint == 1){
+    counter++;
+  }
+  else if (manageint == 2){
+    switch (counter) {
+      case 0: clock(1); break;
+      case 1: tally(1); break;
+      case 2: runTemperature(); break;
+      case 3: runHumidity(); break;
+      case 4: runPressure(); break;
+      case 5: runFlashlight(); break;
+      case 6: runAccelerometer(1); break;
+      case 7: runGyroscope(1); break;
+      case 8: runMagnetometer(1); break;
+      case 9: runMicrophone(); break;
+      case 10: runProxy(); break;
+      case 11: runColor(); break;
+      case 12: runAltitude(); break;
+      case 13: sleep(); break;
+      default:
+        counter = 0;
+        sleepState = false;
+        calibrated = false;
+        tft.fillScreen(ST7735_BLACK);
+        tft.setTextColor(ST77XX_WHITE);
+        digitalWrite(backlightpin, HIGH);
+      break;
+    }
+  }
+  else if (manageint == 3){
+    switch (counter) {
+      case 0: clock(2); break;
+      case 1: tally(2); break;
+      case 2: runTemperature(); break;
+      case 3: runHumidity(); break;
+      case 4: runPressure(); break;
+      case 5: runFlashlight(); break;
+      case 6: runAccelerometer(0); break;
+      case 7: runGyroscope(0); break;
+      case 8: runMagnetometer(0); break;
+      case 9: runMicrophone(); break;
+      case 10: runProxy(); break;
+      case 11: runColor(); break;
+      case 12: runAltitude(); break;
+      case 13: sleep(); break;
+      default:
+        counter = 0;
+        sleepState = false;
+        calibrated = false;
+        tft.fillScreen(ST7735_BLACK);
+        tft.setTextColor(ST77XX_WHITE);
+        digitalWrite(backlightpin, HIGH);
+      break;
+    }
+  }
 }
 void runAccelerometer(int check){
   if (check == 1){
@@ -598,5 +596,62 @@ void clock(int mode){
   }
 }
 void setclock(){
- //Functionality not prepared yet.
+  int mode = 0;
+  //Functionality not prepared yet.
+  while (clockisset == false){
+    int buttoner = generalButtonmanage();
+    if (mode == 0){
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(0, 25);
+    tft.setTextSize(5);
+    tft.print(hour);
+    if (buttoner == 1 ){
+      hour++;
+    }
+    else if (buttoner == 2){
+      hour--;
+    }
+    if (buttoner == 3){
+      mode++;
+    }
+    }
+    else if (mode == 1){
+      tft.fillScreen(ST77XX_BLACK);
+      tft.setCursor(0, 80);
+      tft.setTextSize(5);
+      tft.print(minute);
+      if (buttoner == 1 ){
+        minute++;
+      }
+      else if (buttoner == 2){
+        minute--;
+      }
+      if (buttoner == 3){
+        mode++;
+      }
+    }
+    else if (mode == 2){
+      mode = 0;
+      clockisset = true;
+    }
+  }
+  return;
+}
+int generalButtonmanage(){
+  if (button() == 0){ // Checks if button is pressed
+  pressTime = millis(); // Store when button was pressed
+  while (button() == 0){} //This causes it to wait for the button to be unpressed
+  releaseTime = millis(); // Once the button is no longer = 0, check what time it is.
+  unsigned long duration = releaseTime - pressTime;
+    if (duration >= 1500){
+      return 3; //Long Hold
+    }
+    else if (duration >= 500 && duration < 1000){
+      return 2; //Short Hold
+    }
+    else if (duration < 250){
+      return 1; //Quick Press
+    }
+  }
+  return 0;
 }
